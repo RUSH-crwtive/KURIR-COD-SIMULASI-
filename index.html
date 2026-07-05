@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kurir COD Simulator - Versi Anti-Macet Super Simpel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Fredoka:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; font-family: 'Fredoka', sans-serif; }
+        body { background-color: #0b0b16; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .game-container { position: relative; width: 100vw; height: 100vh; max-width: 450px; max-height: 850px; background: #111; border: 4px solid #f0a500; overflow: hidden; box-shadow: 0 0 25px rgba(240, 165, 0, 0.4); }
+        canvas { width: 100%; height: 100%; display: block; }
+
+        .ui-layer { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+        .hud-item { font-weight: bold; font-size: 14px; color: #f0a500; text-shadow: 1px 1px #000; background: rgba(0,0,0,0.8); padding: 6px 12px; border-radius: 20px; border: 2px solid #f0a500; display: flex; align-items: center; gap: 6px; }
+        .hud-icon { width: 22px; height: 22px; background-size: contain; background-repeat: no-repeat; display: inline-block; }
+        
+        #btn-coffee-hud { position: absolute; bottom: 30px; right: 20px; width: 65px; height: 65px; border-radius: 50%; background: #8b5a2b; border: 3px solid #f0a500; color: white; font-weight: bold; font-size: 11px; z-index: 12; pointer-events: auto; }
+        #btn-coffee-hud:disabled { background: #444; opacity: 0.6; }
+
+        .overlay { position: absolute; inset: 0; background: rgba(10,10,20,0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; padding: 20px; text-align: center; }
+        .hidden { display: none !important; }
+        
+        h1, #game-title { font-family: 'Luckiest Guy', sans-serif; color: #f0a500; font-size: 28px; margin-bottom: 8px; text-shadow: 2px 2px #000; letter-spacing: 1px; }
+        p { margin-bottom: 20px; font-size: 13px; color: #ccc; line-height: 1.4; }
+        
+        .logo-dashboard-container { width: 90%; max-width: 320px; height: auto; margin-bottom: 15px; }
+        .logo-dashboard-container img { width: 100%; height: auto; display: block; }
+
+        .crash-banner-img { width: 100%; height: 240px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 5px; position: relative; }
+        .score-info { font-size: 14px; margin-bottom: 15px; color: #fff; background: rgba(0,0,0,0.85); padding: 10px; border-radius: 8px; width: 90%; border: 2px dashed #ef4444; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; }
+
+        .gameover-buttons-wrapper { width: 100%; display: flex; justify-content: center; gap: 15px; margin-top: -65px; margin-bottom: 25px; height: 55px; z-index: 110; }
+        .btn-invisible { width: 135px; height: 100%; background: transparent; border: none; cursor: pointer; border-radius: 10px; }
+
+        .btn-main, .choice-btn, .btn-buy { font-family: 'Fredoka', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 12px; border: 3px solid #fff; cursor: pointer; transition: transform 0.1s ease, box-shadow 0.1s ease; position: relative; }
+        .btn-main { padding: 12px 20px; font-size: 15px; width: 85%; max-width: 280px; background: #f0a500; box-shadow: 0 5px 0 #c68900; color: #000; margin: 6px; }
+        .btn-secondary { background: #334155; color: white; box-shadow: 0 5px 0 #1e293b; }
+        .btn-donate { background: #e28743; color: white; box-shadow: 0 5px 0 #b65f23; }
+
+        .choice-btn { width: 100%; padding: 10px; margin-bottom: 10px; text-align: left; font-size: 12px; color: white; }
+        .choice-1 { background: #4b5563; box-shadow: 0 5px 0 #1f2937; } 
+        .choice-2 { background: #3b82f6; box-shadow: 0 5px 0 #1d4ed8; } 
+        .choice-3 { background: #10b981; box-shadow: 0 5px 0 #047857; }
+        .choice-btn:active, .btn-main:active, .btn-buy:active { transform: translateY(4px); box-shadow: 0 1px 0 transparent; }
+        .choice-btn:disabled { opacity: 0.3; }
+
+        .shop-box { width: 100%; padding: 15px; border-radius: 12px; border: 3px solid #10b981; background-size: cover; background-position: center; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.9); }
+        .shop-box::before { content: ''; position: absolute; inset: 0; background: rgba(11, 11, 22, 0.82); border-radius: 9px; z-index: 1; }
+        .shop-content-wrapper { position: relative; z-index: 2; width: 100%; }
+        .shop-container { width: 100%; max-height: 250px; overflow-y: auto; margin: 15px 0; background: rgba(0,0,0,0.4); border-radius: 8px; padding: 5px; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: left;}
+        
+        .icon-toko { width: 45px; height: 45px; background-image: url('asset/ITEM & JIMAT KURIR.png'); background-size: 300% 100%; border-radius: 8px;}
+        .icon-bekal { background-position: 0% 0; }
+        .icon-kopi { background-position: 50% 0; }
+        .icon-rt { background-position: 100% 0; }
+        .icon-motor-hedon { background-image: url('asset/SPORT HEDON.png'); background-size: contain; background-repeat: no-repeat; background-position: center; background-color: rgba(255,255,255,0.1); }
+        
+        .shop-text { flex-grow: 1; padding: 0 10px; }
+        .shop-title { font-weight: bold; color: #10b981; font-size: 13px; }
+        .shop-desc { font-size: 10px; color: #ccc; }
+        .btn-buy { padding: 6px 12px; font-size: 11px; background: #10b981; color: white; display: flex; align-items: center; gap: 4px; box-shadow: 0 4px #047857; }
+        .btn-buy:disabled { background: #4b5563; box-shadow: none; opacity: 0.6; }
+        .shop-buy-icon { width: 14px; height: 14px; background-size: contain; background-repeat: no-repeat; display: inline-block; }
+
+        .dialogue-box { background: #191930; border: 3px solid #f0a500; border-radius: 12px; padding: 15px; width: 95%; z-index: 105; background-size: cover; background-position: center; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.85); }
+        .dialogue-box::before { content: ''; position: absolute; inset: 0; background: rgba(15, 15, 30, 0.75); border-radius: 9px; z-index: 1; }
+        .dialogue-content-wrapper { position: relative; z-index: 2; }
+        .customer-banner { width: 100%; height: 130px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 10px; border-radius: 6px; }
+        .dialogue-text { font-style: italic; background: rgba(9,9,24,0.9); padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 12px; color: #fca5a5; border-left: 4px solid #ef4444; text-align: left;}
+
+        .rt-popup-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 200; text-align: center; padding: 20px; }
+        .rt-popup-img { width: 90%; max-width: 320px; height: 180px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 15px; }
+        .rt-doc-img { width: 120px; height: 120px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 10px; }
+        .qr-image-style { width: 180px; height: 180px; border-radius: 12px; margin: 0 auto 15px auto; display: block; border: 4px solid #e28743; box-shadow: 0 0 15px rgba(226, 135, 67, 0.5); }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="ui-layer">
+            <div class="hud-item"><span id="icon-score-hud" class="hud-icon"></span> <span id="score-ui">0</span></div>
+            <div class="hud-item"><span id="icon-coin-hud" class="hud-icon"></span> <span id="coins-ui">0</span></div>
+        </div>
+        <button id="btn-coffee-hud" class="hidden" onclick="useCoffee()"><span>☕ KOPI</span><br><span id="coffee-cooldown">READY</span></button>
+        
+        <div id="game-overlay" class="overlay">
+            <div id="logo-dashboard-box" class="logo-dashboard-container hidden"></div>
+            <h1 id="game-title">KURIR COD SIMULATOR</h1>
+            <p id="game-desc" style="font-size:13px; line-height:1.6;">Menghubungkan aspal kota, mohon tunggu...</p>
+            
+            <button id="start-btn" class="btn-main hidden" onclick="mulaiGame()">GAS MOTOR!</button>
+            <button id="shop-btn" class="btn-main btn-secondary hidden" onclick="openShop()">WARUNG UPGRADE</button>
+            <button id="donate-btn" class="btn-main btn-donate hidden" onclick="openDonasi()">☕ DUKUNG DEVELOPER</button>
+
+            <div id="crash-banner" class="hidden"></div>
+            <div id="gameover-hitbox" class="gameover-buttons-wrapper hidden">
+                <button class="btn-invisible" onclick="mulaiGame()"></button>
+                <button class="btn-invisible" onclick="openShop()"></button>
+            </div>
+            <div id="game-score-info" class="score-info hidden"></div>
+        </div>
+
+        <div id="donasi-overlay" class="overlay hidden">
+            <div class="shop-box" style="border-color:#e28743;">
+                <div class="shop-content-wrapper">
+                    <h1 style="color:#e28743; font-size: 24px;">TRAKTIR KOPI!</h1>
+                    <p style="color:#fff; font-size:13px; margin-bottom:15px;">Scan QR atau ketuk tombol di bawah untuk dukung Ayrush Games!</p>
+                    <img id="qr-donasi-img" src="" class="qr-image-style" alt="QR Saweria">
+                    <button class="btn-main btn-donate" style="width:100%; margin: 0 0 10px 0;" onclick="bukaSaweria()">LINK SAWERIA</button>
+                    <button class="btn-main btn-secondary" style="width:100%; margin: 0;" onclick="closeDonasi()">KEMBALI</button>
+                </div>
+            </div>
+        </div>
+        <div id="shop-overlay" class="overlay hidden">
+            <div id="shop-box-bg" class="shop-box">
+                <div class="shop-content-wrapper">
+                    <h1 style="color:#10b981;">WARUNG UPGRADE</h1>
+                    <p style="display:flex; align-items:center; gap:5px; justify-content:center; color:#fff; font-weight:bold;">Saldo: <span id="icon-shop-hud" class="hud-icon"></span><span id="shop-coins-ui">0</span></p>
+                    <div class="shop-container">
+                        <div class="shop-item">
+                            <div class="icon-toko icon-motor-hedon"></div>
+                            <div class="shop-text"><div class="shop-title">Sport Hedon</div><div class="shop-desc">Kecepatan visual & Multiplier Koin +50%</div></div>
+                            <button class="btn-buy" id="buy-motor" onclick="buyItem('motor', 150)"><span class="shop-buy-icon"></span>150</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon-toko icon-bekal"></div>
+                            <div class="shop-text"><div class="shop-title">Wadah Bekal</div><div class="shop-desc">Shield 1x tabrakan lubang</div></div>
+                            <button class="btn-buy" id="buy-shield" onclick="buyItem('shield', 60)"><span class="shop-buy-icon"></span>60</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon-toko icon-kopi"></div>
+                            <div class="shop-text"><div class="shop-title">Kopi Saset</div><div class="shop-desc">Skill tap pelambat laju (3d)</div></div>
+                            <button class="btn-buy" id="buy-coffee" onclick="buyItem('coffee', 100)"><span class="shop-buy-icon"></span>100</button>
+                        </div>
+                        <div class="shop-item">
+                            <div class="icon-toko icon-rt"></div>
+                            <div class="shop-text"><div class="shop-title">Surat Kuasa RT</div><div class="shop-desc">Menang mediasi & Bonus Koin Gemuk</div></div>
+                            <button class="btn-buy" id="buy-rt" onclick="buyItem('rt', 120)"><span class="shop-buy-icon"></span>120</button>
+                        </div>
+                    </div>
+                    <button class="btn-main btn-secondary" style="background:#10b981; color:#000; box-shadow:0 5px #047857;" onclick="closeShop()">KEMBALI</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dialogue-overlay" class="overlay hidden">
+            <div id="dialogue-box-bg" class="dialogue-box">
+                <div class="dialogue-content-wrapper">
+                    <div id="customer-banner-ui" class="customer-banner"></div>
+                    <h3 style="font-family:'Luckiest Guy', sans-serif; color: #ef4444; font-size: 18px; margin-bottom: 5px;">PELANGGAN NGAMUK!</h3>
+                    <div class="dialogue-text">"Mas, saya gak merasa pesan paket ini! Saya gak mau bayar!"</div>
+                    <button class="choice-btn choice-1" onclick="resolveDialogue(1)">[1] Jurus Pasrah (Lanjut, tanpa koin)</button>
+                    <button class="choice-btn choice-2" onclick="resolveDialogue(2)">✨ [2] Senyum Maut (Bayar 10 koin, Paket Sukses)</button>
+                    <button class="choice-btn choice-3" id="choice-rt-btn" onclick="resolveDialogue(3)">[3] Panggil RT (Butuh Surat RT. Bonus Koin 2x!)</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="rt-popup-overlay" class="rt-popup-overlay hidden">
+            <div id="rt-doc-space" class="rt-doc-img"></div>
+            <div id="rt-banner-space" class="rt-popup-img"></div>
+            <h2 style="color:#10b981; text-shadow:2px 2px #000; font-size:20px; margin-bottom:5px;">PAK RT TURUN TANGAN!</h2>
+            <p style="color:#fff; font-size:13px; font-weight:bold;">Pelanggan sipil tak berkutik, Bonus Koin 2x lipat cair!</p>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 360; canvas.height = 640;
+    const lanes = [60, 180, 300];
+    
+    const images = {};
+    const assetPaths = {
+        kurir: 'asset/ABANG KURIR.png',
+        emak: 'asset/Emak metic.png', 
+        dekor: 'asset/DEKORASI PINGGIR JALAN.png', 
+        jalan: 'asset/JALAN TROTOAR.png',
+        kucing: 'asset/KUCING OREN.png',
+        lobang: 'asset/LOBANG.png',
+        meme: 'asset/MEME VIBE.png',
+        raja: 'asset/RAJA TERAKHIR.png',
+        senyumMaut: 'asset/SENYUM MAUT.png',
+        paketJatoh: 'asset/PAKET JATOH.png',
+        rumahMediasi: 'asset/RUMAH MEDIASI.png',
+        koinCod: 'asset/KOIN COD.png',
+        paketDiatasLayar: 'asset/PAKET DIATAS LAYAR.png',
+        logoJudul: 'asset/KURIR COD.png',
+        pakRtLomba: 'asset/PAK RT.png',
+        sportHedon: 'asset/SPORT HEDON.png',
+        qrDonasi: 'asset/1000225439.png'
+    };
+
+    const audioFiles = {
+        bgmRunner: 'asset/audio/tancap_gas.mp3',
+        bgmMediasi: 'asset/audio/BOSS.mp3',
+        sfxKnalpot: 'asset/audio/knalpot.mp3',
+        sfxWuss: 'asset/audio/whuus kartun.mp3',
+        sfxKucing: 'asset/audio/KUCING.mp3',
+        sfxEmak: 'asset/audio/Mak metic.mp3',
+        sfxLobang: 'asset/audio/BLAKHOLE wind.mp3',
+        sfxKopi: 'asset/audio/KOPI AHH.mp3',
+        sfxVineBoom: 'asset/audio/VANE BOOM.mp3',
+        sfxCrash: 'asset/audio/PAKET AJOOR.aac'
+    };
+
+    const audioBuffers = {};
+    let audioCtx = null;
+    let bgmRunnerSource = null, bgmMediasiSource = null, knalpotSource = null;
+    let bgmRunnerGain = null;
+    let audioLoadedCount = 0;
+    const totalAudio = Object.keys(audioFiles).length;
+
+    function initAudioContext() { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } }
+
+    let hasLoadError = false;
+    let loadedCount = 0; 
+    const totalAssets = Object.keys(assetPaths).length;
+
+    Object.entries(assetPaths).forEach(([key, path]) => {
+        images[key] = new Image();
+        images[key].src = path;
+        images[key].onload = () => { loadedCount++; checkAllAssetsLoaded(); };
+        images[key].onerror = () => { 
+            console.log(`[Fail-Safe] Gambar ${key} terlewati.`);
+            images[key].isFallback = true;
+            loadedCount++; checkAllAssetsLoaded(); 
+        };
+    });
+
+    function loadAllAudioBuffers() {
+        const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+        Object.entries(audioFiles).forEach(([key, path]) => {
+            fetch(path)
+                .then(response => { if (!response.ok) throw new Error(); return response.arrayBuffer(); })
+                .then(data => {
+                    if (audioCtx) {
+                        return audioCtx.decodeAudioData(data).then(buffer => {
+                            audioBuffers[key] = buffer; audioLoadedCount++; checkAllAssetsLoaded();
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.log(`[Fail-Safe] Audio ${key} terlewati.`);
+                    audioLoadedCount++; checkAllAssetsLoaded();
+                });
+        });
+    }
+
+    function checkAllAssetsLoaded() {
+        if (loadedCount === totalAssets && audioLoadedCount === totalAudio) { readyToGas(); } 
+        else { document.getElementById('game-desc').innerText = `Menghubungkan Mesin (${loadedCount}/${totalAssets})...`; }
+    }
+
+    function playSFX(key, loop = false, volume = 1.0) {
+        if (!audioCtx || !audioBuffers[key]) return null;
+        let source = audioCtx.createBufferSource(); source.buffer = audioBuffers[key]; source.loop = loop;
+        let gainNode = audioCtx.createGain(); gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        source.connect(gainNode); gainNode.connect(audioCtx.destination); source.start(0);
+        return { source, gainNode };
+    }
+
+    loadAllAudioBuffers();
+    let globalCoins = 0;
+    let upgrades = { shieldUnlocked: false, coffeeUnlocked: false, suratRT: false, motorSport: false };
+    let player = { lane: 1, x: lanes[1], y: 530, width: 62, height: 85, speed: 18, hasActiveShield: false };
+    
+    let obstacles = []; let decors = []; 
+    let roadY = 0; let baseGameSpeed = 5; let gameSpeed = 5;
+    let score = 0; let gameOver = true; let isPaused = false;
+    let spawnTimer = 0; let gameFrame = 0; let lastDialogueScore = 0;
+    let screenShakeTime = 0; let screenShakeIntensity = 0;
+    let coffeeActive = false; let coffeeCooldownTime = 0; let flashTimer = 0;
+    let senyumTimer = 0; let lastSpeedIncreaseScore = 0; 
+
+    function readyToGas() {
+        document.getElementById('start-btn').classList.remove('hidden');
+        document.getElementById('shop-btn').classList.remove('hidden');
+        document.getElementById('donate-btn').classList.remove('hidden');
+        
+        document.getElementById('crash-banner').classList.add('hidden');
+        document.getElementById('gameover-hitbox').classList.add('hidden');
+        document.getElementById('game-score-info').classList.add('hidden');
+        
+        document.getElementById('game-title').style.display = 'none'; 
+        document.getElementById('game-desc').style.display = 'none';
+        
+        const logoBox = document.getElementById('logo-dashboard-box');
+        if (!images.logoJudul.isFallback) {
+            logoBox.classList.remove('hidden');
+            logoBox.innerHTML = `<img src="${images.logoJudul.src}" alt="Logo">`;
+        } else {
+            document.getElementById('game-title').style.display = 'block';
+        }
+        
+        if (!images.paketDiatasLayar.isFallback) document.getElementById('icon-score-hud').style.backgroundImage = `url('${images.paketDiatasLayar.src}')`;
+        if (!images.koinCod.isFallback) document.getElementById('icon-coin-hud').style.backgroundImage = `url('${images.koinCod.src}')`;
+        if (!images.koinCod.isFallback) document.getElementById('icon-shop-hud').style.backgroundImage = `url('${images.koinCod.src}')`;
+        if (!images.raja.isFallback) document.getElementById('customer-banner-ui').style.backgroundImage = `url('${images.raja.src}')`;
+        if (!images.qrDonasi.isFallback) document.getElementById('qr-donasi-img').src = images.qrDonasi.src;
+        
+        if (!images.rumahMediasi.isFallback) document.getElementById('dialogue-box-bg').style.backgroundImage = `url('${images.rumahMediasi.src}')`;
+        if (!images.rumahMediasi.isFallback) document.getElementById('shop-box-bg').style.backgroundImage = `url('${images.rumahMediasi.src}')`;
+
+        const buyIcons = document.querySelectorAll('.shop-buy-icon');
+        buyIcons.forEach(icon => { if(!images.koinCod.isFallback) icon.style.backgroundImage = `url('${images.koinCod.src}')`; });
+    }
+
+    function triggerShake(d = 45, i = 25) { screenShakeTime = d; screenShakeIntensity = i; }
+
+    // Sistem Kendali Jendela Donasi
+    function openDonasi() { document.getElementById('game-overlay').classList.add('hidden'); document.getElementById('donasi-overlay').classList.remove('hidden'); }
+    function closeDonasi() { document.getElementById('donasi-overlay').classList.add('hidden'); document.getElementById('game-overlay').classList.remove('hidden'); }
+    function bukaSaweria() { window.open('https://saweria.co/ayrushgames8', '_blank'); }
+
+    function openShop() { document.getElementById('game-overlay').classList.add('hidden'); document.getElementById('shop-overlay').classList.remove('hidden'); updateShopUI(); }
+    
+    function closeShop() { 
+        document.getElementById('shop-overlay').classList.add('hidden'); 
+        document.getElementById('game-overlay').classList.remove('hidden'); 
+        if (gameOver) {
+            document.getElementById('logo-dashboard-box').classList.add('hidden');
+            document.getElementById('start-btn').classList.add('hidden');
+            document.getElementById('shop-btn').classList.add('hidden');
+            document.getElementById('donate-btn').classList.add('hidden');
+            document.getElementById('crash-banner').classList.remove('hidden');
+            document.getElementById('gameover-hitbox').classList.remove('hidden');
+            document.getElementById('game-score-info').classList.remove('hidden');
+        } else {
+            readyToGas();
+        }
+    }
+    
+    function updateShopUI() {
+        document.getElementById('shop-coins-ui').innerText = globalCoins; document.getElementById('coins-ui').innerText = globalCoins;
+        document.getElementById('buy-motor').disabled = upgrades.motorSport; document.getElementById('buy-motor').innerHTML = upgrades.motorSport ? "LUNAS" : "🪙 150";
+        document.getElementById('buy-shield').disabled = upgrades.shieldUnlocked; document.getElementById('buy-shield').innerHTML = upgrades.shieldUnlocked ? "READY" : "🪙 60";
+        document.getElementById('buy-coffee').disabled = upgrades.coffeeUnlocked; document.getElementById('buy-coffee').innerHTML = upgrades.coffeeUnlocked ? "AKTIF" : "🪙 100";
+        document.getElementById('buy-rt').disabled = upgrades.suratRT; document.getElementById('buy-rt').innerHTML = upgrades.suratRT ? "DIMILIKI" : "🪙 120";
+    }
+
+    function buyItem(k, c) { if (globalCoins >= c) { globalCoins -= c; if(k === 'motor') upgrades.motorSport = true; else upgrades[k+"Unlocked"] = true; if(k === 'rt') upgrades.suratRT = true; updateShopUI(); } }
+    
+    function useCoffee() {
+        if (!upgrades.coffeeUnlocked || coffeeActive || coffeeCooldownTime > 0 || gameOver || isPaused) return;
+        playSFX('sfxKopi', false, 1.0); coffeeActive = true; coffeeCooldownTime = 600; gameSpeed = baseGameSpeed * 0.5;
+        setTimeout(() => { coffeeActive = false; if(!isPaused && !gameOver) gameSpeed = baseGameSpeed; }, 3000);
+    }
+    function stopLoopingAudio() {
+        if (bgmRunnerSource) { try { bgmRunnerSource.stop(); } catch(e){} }
+        if (bgmMediasiSource) { try { bgmMediasiSource.stop(); } catch(e){} }
+        if (knalpotSource) { try { knalpotSource.stop(); } catch(e){} }
+    }
+
+    function mulaiGame() {
+        initAudioContext(); if (audioCtx && audioCtx.state === 'suspended') { audioCtx.resume(); }
+        stopLoopingAudio();
+
+        let runnerAudio = playSFX('bgmRunner', true, 0.7); if(runnerAudio) { bgmRunnerSource = runnerAudio.source; bgmRunnerGain = runnerAudio.gainNode; }
+        let knalpotAudio = playSFX('sfxKnalpot', true, 0.4); if(knalpotAudio) { knalpotSource = knalpotAudio.source; }
+
+        document.getElementById('game-overlay').classList.add('hidden');
+        player.lane = 1; player.x = lanes[1]; player.hasActiveShield = upgrades.shieldUnlocked;
+        obstacles = []; decors = []; score = 0; lastSpeedIncreaseScore = 0;
+        baseGameSpeed = upgrades.motorSport ? 6.5 : 5.0; gameSpeed = baseGameSpeed;
+        gameOver = false; isPaused = false; lastDialogueScore = 0; coffeeActive = false; coffeeCooldownTime = 0; flashTimer = 0; senyumTimer = 0;
+        document.getElementById('score-ui').innerText = score; document.getElementById('coins-ui').innerText = globalCoins;
+        if (upgrades.coffeeUnlocked) document.getElementById('btn-coffee-hud').classList.remove('hidden');
+        updateGame();
+    }
+
+    function triggerCODDialogue() {
+        isPaused = true; document.getElementById('dialogue-overlay').classList.remove('hidden');
+        document.getElementById('choice-rt-btn').disabled = !upgrades.suratRT;
+        playSFX('sfxVineBoom', false, 1.0);
+        let now = audioCtx.currentTime; if (bgmRunnerGain) bgmRunnerGain.gain.setValueAtTime(0, now + 0.1);
+        if (knalpotSource) { try { knalpotSource.stop(); } catch(e){} }
+        let mediasiAudio = playSFX('bgmMediasi', true, 0.85); if(mediasiAudio) { bgmMediasiSource = mediasiAudio.source; }
+    }
+
+    function resolveDialogue(c) {
+        document.getElementById('dialogue-overlay').classList.add('hidden'); lastDialogueScore = score;
+        if (c === 1) { triggerShake(20, 10); } 
+        else if (c === 2) { globalCoins = Math.max(0, globalCoins - 10); score++; senyumTimer = 90; } 
+        else if (c === 3 && upgrades.suratRT) { 
+            isPaused = true;
+            const popup = document.getElementById('rt-popup-overlay');
+            if (!images.paketDiatasLayar.isFallback) popup.querySelector('#rt-doc-space').style.backgroundImage = `url('${images.paketDiatasLayar.src}')`;
+            if (!images.pakRtLomba.isFallback) popup.querySelector('#rt-banner-space').style.backgroundImage = `url('${images.pakRtLomba.src}')`;
+            popup.classList.remove('hidden');
+            playSFX('sfxVineBoom', false, 1.2); triggerShake(30, 15);
+            setTimeout(() => {
+                popup.classList.add('hidden'); globalCoins += upgrades.motorSport ? 120 : 80; score++;
+                resumeGameplayLoop();
+            }, 2500); return;
+        }
+        resumeGameplayLoop();
+    }
+
+    function resumeGameplayLoop() {
+        document.getElementById('score-ui').innerText = score; document.getElementById('coins-ui').innerText = globalCoins;
+        if (bgmMediasiSource) { try { bgmMediasiSource.stop(); } catch(e){} }
+        if (bgmRunnerGain) bgmRunnerGain.gain.setValueAtTime(0.7, audioCtx.currentTime);
+        let knalpotAudio = playSFX('sfxKnalpot', true, 0.4); if(knalpotAudio) { knalpotSource = knalpotAudio.source; }
+        isPaused = false; updateGame();
+    }
+    function updateGame() {
+        if (gameOver || isPaused) return; gameFrame++;
+        let dynamicPitch = 1.0 + (gameSpeed - 5.0) * 0.08; dynamicPitch = Math.min(dynamicPitch, 1.7); 
+        if (bgmRunnerSource) { bgmRunnerSource.playbackRate.value = dynamicPitch; }
+        if (knalpotSource) { knalpotSource.playbackRate.value = dynamicPitch; }
+
+        if (coffeeCooldownTime > 0) { coffeeCooldownTime--; document.getElementById('coffee-cooldown').innerText = Math.ceil(coffeeCooldownTime/60)+"s"; document.getElementById('btn-coffee-hud').disabled = true; } 
+        else { document.getElementById('coffee-cooldown').innerText = "READY"; document.getElementById('btn-coffee-hud').disabled = false; }
+
+        let tx = lanes[player.lane];
+        if (player.x < tx) player.x = Math.min(player.x + player.speed, tx);
+        if (player.x > tx) player.x = Math.max(player.x - player.speed, tx);
+        roadY += gameSpeed; if (roadY >= canvas.height) roadY = 0;
+
+        spawnTimer++;
+        if (spawnTimer > 85) {
+            let tr = Math.random(); let lr = Math.floor(Math.random()*3);
+            let obs = { x: lanes[lr], y: -50, radius: 20, type: 'pothole', sfxTriggered: false };
+            if (tr > 0.35 && tr <= 0.7) { obs.type = 'kucing'; obs.x = Math.random()>0.5 ? -40:canvas.width+40; obs.targetX = lanes[1]; obs.speedX = obs.x < obs.targetX ? 3.8:-3.8; } 
+            else if (tr > 0.7) { obs.type = 'emak'; obs.targetLane = Math.floor(Math.random()*3); obs.zTimer = 0; }
+            obstacles.push(obs); spawnTimer = 0;
+        }
+
+        if (gameFrame % 45 === 0) { decors.push({ y: -100, tX: Math.floor(Math.random()*4), tY: Math.floor(Math.random()*3), side: Math.random()>0.5 ? 0 : 1 }); }
+        for (let i = decors.length - 1; i >= 0; i--) { decors[i].y += gameSpeed; if (decors[i].y > canvas.height + 100) decors.splice(i, 1); }
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            let obs = obstacles[i]; obs.y += gameSpeed;
+            if (obs.type === 'kucing') { if (Math.abs(obs.x - obs.targetX)>5) obs.x += obs.speedX; } 
+            else if (obs.type === 'emak') { obs.zTimer++; if (obs.zTimer > 45) { obs.targetLane = Math.floor(Math.random()*3); obs.zTimer = 0; }
+                let t = lanes[obs.targetLane]; if (obs.x < t) obs.x += 3; if (obs.x > t) obs.x -= 3;
+            }
+            if (obs.y > player.y - 150 && obs.y < player.y + 50 && !obs.sfxTriggered) {
+                if (obs.type === 'kucing') { playSFX('sfxKucing', false, 1.0); }
+                else if (obs.type === 'emak') { playSFX('sfxEmak', false, 1.0); }
+                else if (obs.type === 'pothole') { playSFX('sfxLobang', false, 0.8); }
+                obs.sfxTriggered = true;
+            }
+            if (Math.abs(player.x - obs.x) < 45 && Math.abs(player.y - obs.y) < 55) triggerShake(1, 1.5);
+            if (obs.y > canvas.height + 60) {
+                obstacles.splice(i, 1); score++; globalCoins += upgrades.motorSport ? 8 : 5;
+                document.getElementById('score-ui').innerText = score; document.getElementById('coins-ui').innerText = globalCoins;
+                if (score % 4 === 0 && score !== lastSpeedIncreaseScore && !coffeeActive) { baseGameSpeed += 0.4; gameSpeed = baseGameSpeed; lastSpeedIncreaseScore = score; }
+                if (score % 5 === 0 && score !== lastDialogueScore) { triggerCODDialogue(); return; }
+                continue;
+            }
+            let closestX = Math.max(player.x - player.width/2 + 5, Math.min(obs.x, player.x + player.width/2 - 5));
+            let closestY = Math.max(player.y - player.height/2 + 10, Math.min(obs.y, player.y + player.height/2 - 10));
+            let hitDistSq = (obs.x - closestX)**2 + (obs.y - closestY)**2;
+            if (hitDistSq < obs.radius**2) {
+                if (player.hasActiveShield) { player.hasActiveShield = false; upgrades.shieldUnlocked = false; obstacles.splice(i,1); triggerShake(25,12); continue; } 
+                else { flashTimer = 25; gameOver = true; stopLoopingAudio(); playSFX('sfxCrash', false, 1.2); handleCrash(); return; }
+            }
+        }
+        drawGame(); requestAnimationFrame(updateGame);
+    }
+
+    function handleCrash() {
+        if (flashTimer > 0) {
+            flashTimer--; ctx.fillStyle = "#fff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            if (!images.meme.isFallback) ctx.drawImage(images.meme, canvas.width/2 - 140, canvas.height/2 - 70, 280, 140);
+            requestAnimationFrame(handleCrash);
+        } else {
+            triggerShake(60, 30); 
+            document.getElementById('game-overlay').classList.remove('hidden'); 
+            document.getElementById('logo-dashboard-box').classList.add('hidden');
+            document.getElementById('start-btn').classList.add('hidden');
+            document.getElementById('shop-btn').classList.add('hidden');
+            document.getElementById('donate-btn').classList.add('hidden');
+            
+            const banner = document.getElementById('crash-banner');
+            banner.classList.remove('hidden'); banner.className = "crash-banner-img";
+            if (!images.paketJatoh.isFallback) banner.style.backgroundImage = `url('${images.paketJatoh.src}')`;
+            document.getElementById('gameover-hitbox').classList.remove('hidden');
+            
+            const infoBox = document.getElementById('game-score-info');
+            infoBox.classList.remove('hidden');
+            infoBox.innerHTML = `Sukses: <b>${score}</b> Paket | Tabungan Kustom: 🪙 <b>${globalCoins}</b>`;
+        }
+    }
+    function drawGame() {
+        ctx.save();
+        if (screenShakeTime > 0) { ctx.translate((Math.random()-0.5)*screenShakeIntensity, (Math.random()-0.5)*screenShakeIntensity); screenShakeTime--; }
+        
+        if (!images.jalan.isFallback) {
+            ctx.drawImage(images.jalan, 0, roadY - canvas.height, canvas.width, canvas.height);
+            ctx.drawImage(images.jalan, 0, roadY, canvas.width, canvas.height);
+        } else {
+            ctx.fillStyle = "#333"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#fff"; ctx.fillRect(175, 0, 10, canvas.height);
+        }
+
+        let decW = images.dekor.width / 4; let decH = images.dekor.height / 3;
+        decors.forEach(d => {
+            let xPos = d.side === 0 ? -15 : canvas.width - 65;
+            if (!images.dekor.isFallback) ctx.drawImage(images.dekor, decW * d.tX, decH * d.tY, decW, decH, xPos, d.y, 80, 80);
+        });
+
+        obstacles.forEach(obs => {
+            if (obs.type === 'pothole') {
+                if (!images.lobang.isFallback) ctx.drawImage(images.lobang, obs.x - 35, obs.y - 35, 70, 70);
+                else { ctx.fillStyle = "#ff0000"; ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI*2); ctx.fill(); }
+            } else if (obs.type === 'kucing') {
+                if (!images.kucing.isFallback) ctx.drawImage(images.kucing, obs.x - 30, obs.y - 30, 60, 60);
+                else { ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI*2); ctx.fill(); }
+            } else if (obs.type === 'emak') {
+                if (!images.emak.isFallback) {
+                    let emakFrame = Math.floor(gameFrame / 8) % 3; let ew = images.emak.width / 3;
+                    ctx.drawImage(images.emak, ew * emakFrame, 0, ew, images.emak.height, obs.x - 35, obs.y - 45, 70, 90);
+                } else { ctx.fillStyle = "#ff00ff"; ctx.fillRect(obs.x - 20, obs.y - 30, 40, 60); }
+            }
+        });
+
+        ctx.save(); ctx.translate(player.x, player.y);
+        if (player.hasActiveShield) { ctx.strokeStyle = "rgba(0, 230, 255, 0.8)"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0,0,44,0,Math.PI*2); ctx.stroke(); }
+        
+        ctx.shadowColor = "#000000"; ctx.shadowBlur = 4;
+        if (upgrades.motorSport) {
+            if (!images.sportHedon.isFallback) ctx.drawImage(images.sportHedon, -45, -45, 90, 90);
+            else { ctx.fillStyle = "#00ffff"; ctx.fillRect(-25, -40, 50, 80); }
+        } else {
+            if (!images.kurir.isFallback) {
+                let kw = images.kurir.width / 4; let kh = images.kurir.height / 4; let kFrame = Math.floor(gameFrame / 6) % 4; 
+                ctx.drawImage(images.kurir, kw * kFrame, kh * 0, kw, kh, -player.width/2, -player.height/2, player.width, player.height);
+            } else { ctx.fillStyle = "#ffff00"; ctx.fillRect(-player.width/2, -player.height/2, player.width, player.height); }
+        }
+        ctx.restore();
+
+        if (senyumTimer > 0) {
+            senyumTimer--; 
+            if (!images.senyumMaut.isFallback) ctx.drawImage(images.senyumMaut, canvas.width/2 - 150, canvas.height/2 - 160, 300, 200);
+            ctx.fillStyle = "#f0a500"; ctx.font = "bold 20px 'Luckiest Guy', sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("✨ JURUS SENYUM MAUT! ✨", canvas.width/2, canvas.height/2 + 80);
+        }
+        ctx.restore();
+    }
+
+    window.addEventListener('touchstart', function(e) {
+        if (gameOver || isPaused || e.target.closest('#btn-coffee-hud') || senyumTimer > 0) return;
+        let originalLane = player.lane;
+        if (e.touches[0].clientX < window.innerWidth / 2) { if (player.lane > 0) player.lane--; } 
+        else { if (player.lane < 2) player.lane++; }
+        if(player.lane !== originalLane) { playSFX('sfxWuss', false, 0.6); }
+    });
+</script>
+</body>
+</html>
